@@ -1,7 +1,0 @@
-{
-  "build": {
-    "buildArgs": {
-      "CACHE_MOUNT_ID": "buildkit-cache-uv"
-    }
-  }
-}
