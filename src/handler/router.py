@@ -53,12 +53,8 @@ class Router(BaseHandler):
         match route:
             case IntentEnum.summarize:
                 await self.summarize(message)
-            case IntentEnum.ask_question:
+            case IntentEnum.ask_question | IntentEnum.about | IntentEnum.other:
                 await self.ask_knowledge_base(message)
-            case IntentEnum.about:
-                await self.about(message)
-            case IntentEnum.other:
-                await self.default_response(message)
 
     async def _route(self, message: str) -> IntentEnum:
         agent = Agent(
@@ -103,3 +99,4 @@ class Router(BaseHandler):
             response.output,
             message.message_id,
         )
+
