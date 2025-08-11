@@ -67,7 +67,7 @@ class BaseHandler:
             if message.group_jid:
                 group = await self.session.get(Group, message.group_jid)
                 if group is None:
-                    group = Group(**BaseGroup(group_jid=message.group_jid, managed=True).model_dump())
+                    group = Group(**BaseGroup(group_jid=message.group_jid, managed=True, notify_on_spam=True).model_dump())
                     await self.upsert(group)
                     await self.session.flush()
 
