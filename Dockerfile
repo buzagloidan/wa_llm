@@ -10,6 +10,7 @@ WORKDIR /app
 ARG CACHE_MOUNT_ID=uv-cache
 
 RUN --mount=type=secret,id=netrc,target=/root/.netrc,mode=0600 \
+    --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
     --mount=type=bind,source=./uv.lock,target=uv.lock \
     --mount=type=bind,source=./pyproject.toml,target=pyproject.toml \
     --mount=type=bind,source=./.python-version,target=.python-version \
