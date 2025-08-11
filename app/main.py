@@ -8,7 +8,18 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 import logging
 import logfire
 
-from api import load_new_kbtopics_api, status, summarize_and_send_to_group_api, webhook
+import logging
+
+# Add early logging to debug imports
+early_logger = logging.getLogger("main")
+early_logger.setLevel(logging.INFO)
+
+try:
+    from api import load_new_kbtopics_api, status, summarize_and_send_to_group_api, webhook
+    early_logger.info("Successfully imported all API modules")
+except ImportError as e:
+    early_logger.error(f"Failed to import API modules: {e}")
+    raise
 import models  # noqa
 from config import Settings
 from whatsapp import WhatsAppClient
@@ -75,10 +86,21 @@ logfire.instrument_httpx(capture_all=True)
 logfire.instrument_system_metrics()
 
 
+logging.info("Registering API routes...")
+
+logging.info(f"Webhook router has {len(webhook.router.routes)} routes")
 app.include_router(webhook.router)
+
+logging.info(f"Status router has {len(status.router.routes)} routes") 
 app.include_router(status.router)
+
+logging.info(f"Summarize router has {len(summarize_and_send_to_group_api.router.routes)} routes")
 app.include_router(summarize_and_send_to_group_api.router)
+
+logging.info(f"Load topics router has {len(load_new_kbtopics_api.router.routes)} routes")
 app.include_router(load_new_kbtopics_api.router)
+
+logging.info("All API routes registered successfully")
 
 if __name__ == "__main__":
     import uvicorn

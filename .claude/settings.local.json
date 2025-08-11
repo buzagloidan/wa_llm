@@ -6,7 +6,8 @@
       "Bash(git push:*)",
       "Bash(rm:*)",
       "Bash(alembic revision:*)",
-      "Bash(python -m alembic revision:*)"
+      "Bash(python -m alembic revision:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }
