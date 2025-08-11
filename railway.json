@@ -1,7 +1,7 @@
 {
   "build": {
     "buildArgs": {
-      "CACHE_MOUNT_ID": "europe-west4-uv-cache"
+      "CACHE_MOUNT_ID": "cache-europe-west4-uv"
     }
   }
 }
