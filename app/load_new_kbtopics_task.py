@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class CheckStatusSettings(BaseSettings):
-    base_url: str = "http://localhost:8000"
+    base_url: str = "http://localhost:8080"
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -25,28 +25,30 @@ async def main():
     logging.basicConfig(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
-        level=logging.DEBUG,
+        level=logging.INFO,
     )
     logfire.configure()
     logfire.instrument_pydantic_ai()
     logfire.instrument_httpx(capture_all=True)
     logfire.instrument_system_metrics()
 
+    logger.info("Starting daily topics loading task at 19:00 Israel time (16:00 UTC)")
+    
     try:
-        # Create an async HTTP client and forward the message
+        # Create an async HTTP client and call the topics loading endpoint
         async with httpx.AsyncClient(timeout=600.0) as client:
+            logger.info(f"Calling topics loading endpoint: {settings.base_url}/load_new_kbtopics")
             response = await client.post(
                 f"{settings.base_url}/load_new_kbtopics",
             )
             response.raise_for_status()
+            logger.info(f"Daily topics loading task completed successfully: {response.status_code}")
 
     except httpx.HTTPError as exc:
-        # Log the error but don't raise it to avoid breaking message processing
-        logger.error(f"status check failed: {exc}")
+        logger.error(f"Daily topics loading task failed - HTTP error: {exc}")
         raise
     except Exception as exc:
-        # Catch any other unexpected errors
-        logger.error(f"Unexpected error when calling status endpoint: {exc}")
+        logger.error(f"Daily topics loading task failed - Unexpected error: {exc}")
         raise
 
 
