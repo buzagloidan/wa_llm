@@ -68,7 +68,7 @@ class Router(BaseHandler):
         )
 
         result = await agent.run(message)
-        return result.data.intent
+        return result.output.intent
 
     async def summarize(self, message: Message):
         time_24_hours_ago = datetime.now() - timedelta(hours=24)
@@ -100,6 +100,6 @@ class Router(BaseHandler):
         )
         await self.send_message(
             message.chat_jid,
-            response.data,
+            response.output,
             message.message_id,
         )

@@ -66,14 +66,14 @@ async def summarize_and_send_to_group(session, whatsapp: WhatsAppClient, group: 
 
     try:
         await whatsapp.send_message(
-            SendMessageRequest(phone=group.group_jid, message=response.data)
+            SendMessageRequest(phone=group.group_jid, message=response.output)
         )
 
         # Send the summary to the community groups
         community_groups = await group.get_related_community_groups(session)
         for cg in community_groups:
             await whatsapp.send_message(
-                SendMessageRequest(phone=cg.group_jid, message=response.data)
+                SendMessageRequest(phone=cg.group_jid, message=response.output)
             )
 
     except Exception as e:
