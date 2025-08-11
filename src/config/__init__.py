@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     whatsapp_basic_auth_password: Optional[str] = None
     whatsapp_basic_auth_user: Optional[str] = None
 
-    anthropic_api_key: str
+    google_api_key: str
 
     # Voyage settings
     voyage_api_key: str
@@ -39,8 +39,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def apply_env(self) -> Self:
-        if self.anthropic_api_key:
-            environ["ANTHROPIC_API_KEY"] = self.anthropic_api_key
+        if self.google_api_key:
+            environ["GOOGLE_API_KEY"] = self.google_api_key
 
         if self.logfire_token:
             environ["LOGFIRE_TOKEN"] = self.logfire_token
