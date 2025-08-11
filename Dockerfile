@@ -8,7 +8,7 @@ RUN apt-get install -qyy -o APT::Install-Recommends=false -o APT::Install-Sugges
 WORKDIR /app
 
 RUN --mount=type=secret,id=netrc,target=/root/.netrc,mode=0600 \
-    --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
     --mount=type=bind,source=./uv.lock,target=uv.lock \
     --mount=type=bind,source=./pyproject.toml,target=pyproject.toml \
     --mount=type=bind,source=./.python-version,target=.python-version \
