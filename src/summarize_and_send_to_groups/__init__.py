@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 )
 async def summarize(group_name: str, messages: list[Message]) -> AgentRunResult[str]:
     agent = Agent(
-        model="gemini-2.5-flash-lite",
+        model="gemini-2.5-flash",
         system_prompt=f""""
         Write a quick summary of what happened in the chat group since the last summary.
         
