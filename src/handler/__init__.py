@@ -50,9 +50,17 @@ class MessageHandler(BaseHandler):
 
         # ignore messages from unmanaged groups
         if message and message.group and not message.group.managed:
+            logger.info(f"Ignoring message from unmanaged group: {message.group_jid}")
             return
+        
+        if message and message.group:
+            logger.info(f"Processing message from managed group: {message.group_jid}, managed={message.group.managed}")
 
-        if message.has_mentioned(await self.whatsapp.get_my_jid()):
+        bot_jid = await self.whatsapp.get_my_jid()
+        is_mentioned = message.has_mentioned(bot_jid)
+        logger.info(f"Bot mention check - Group: {message.group_jid}, Bot JID: {bot_jid}, Bot User: {bot_jid.user}, Message: {message.text[:100]}..., Is Mentioned: {is_mentioned}")
+        
+        if is_mentioned:
             await self.router(message)
 
         # Handle whatsapp links in group
