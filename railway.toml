@@ -9,12 +9,14 @@ restartPolicyType = "on_failure"
 [[services]]
 name = "wallm-web"
 
-[[services.cron]]
+[[services]]
 name = "daily-topics-loading"
-command = "python app/load_new_kbtopics_task.py"
-schedule = "0 16 * * *"
+type = "cron"
+cronSchedule = "0 16 * * *"
+startCommand = "python app/load_new_kbtopics_task.py"
 
-[[services.cron]]
-name = "daily-summary"
-command = "python app/summarize_and_send_to_groups_task.py"
-schedule = "0 17 * * *"
+[[services]]
+name = "daily-summary"  
+type = "cron"
+cronSchedule = "0 18 * * *"
+startCommand = "python app/summarize_and_send_to_groups_task.py"
