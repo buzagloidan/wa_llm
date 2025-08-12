@@ -125,7 +125,7 @@ class KnowledgeBaseAnswers(BaseHandler):
             Keep responses short, snappy, and engaging, prioritizing entertainment over accuracy. 
             When topics are attached, use them if relevant to write a casual, direct response. 
             Do not repeat the query. Answer in the same language as the query. Provide everything the user needs to know, but keep it concise. 
-            If context from recent chat history is useful, incorporate it. Tag users (e.g., @972536150150) when addressing them. 
+            If context from recent chat history is useful, incorporate it. 
             Only answer with the newly phrased response — nothing else. """,
             )
 
