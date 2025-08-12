@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import ValidationError
+from starlette.requests import ClientDisconnect
 
 from api.deps import get_handler
 from handler import MessageHandler
@@ -31,6 +32,7 @@ async def webhook(
     Returns:
         Simple "ok" response to acknowledge receipt
     """
+    raw_body = None
     try:
         # Get raw JSON first for logging
         raw_body = await request.body()
@@ -55,11 +57,16 @@ async def webhook(
 
         return "ok"
         
+    except ClientDisconnect:
+        logger.warning("Client disconnected during webhook processing")
+        return "ok"  # Still return ok to avoid webhook retries
     except ValidationError as e:
         logger.error(f"Webhook validation error: {e}")
-        logger.error(f"Raw body that failed validation: {raw_body.decode()}")
+        if raw_body:
+            logger.error(f"Raw body that failed validation: {raw_body.decode()}")
         return "ok"  # Still return ok to avoid webhook retries
     except Exception as e:
         logger.error(f"Webhook processing error: {e}")
-        logger.error(f"Raw body: {raw_body.decode()}")
+        if raw_body:
+            logger.error(f"Raw body: {raw_body.decode()}")
         return "ok"  # Still return ok to avoid webhook retries
