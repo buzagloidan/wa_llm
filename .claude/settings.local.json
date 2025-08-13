@@ -9,7 +9,9 @@
       "Bash(python -m alembic revision:*)",
       "Bash(cat:*)",
       "Bash(grep:*)",
-      "Bash(railway status:*)"
+      "Bash(railway status:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)"
     ],
     "deny": []
   }

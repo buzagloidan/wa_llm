@@ -6,7 +6,6 @@ from sqlmodel import Field, Relationship, SQLModel
 from whatsapp.jid import normalize_jid
 
 if TYPE_CHECKING:
-    from .group import Group
     from .message import Message
 
 
@@ -22,7 +21,6 @@ class BaseSender(SQLModel):
 
 class Sender(BaseSender, table=True):
     messages: List["Message"] = Relationship(back_populates="sender")
-    groups_owned: List["Group"] = Relationship(back_populates="owner")
 
 
 Sender.model_rebuild()

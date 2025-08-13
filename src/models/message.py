@@ -8,7 +8,6 @@ from whatsapp.jid import normalize_jid, parse_jid, JID
 from .webhook import WhatsAppWebhookPayload, Message as PayloadMessage
 
 if TYPE_CHECKING:
-    from .group import Group
     from .sender import Sender
 
 
@@ -22,12 +21,6 @@ class BaseMessage(SQLModel):
     media_url: Optional[str] = Field(default=None)
     chat_jid: str = Field(max_length=255)
     sender_jid: str = Field(max_length=255, foreign_key="sender.jid")
-    group_jid: Optional[str] = Field(
-        max_length=255,
-        foreign_key="group.group_jid",
-        nullable=True,
-        default=None,
-    )
     reply_to_id: Optional[str] = Field(default=None, nullable=True)
 
     @model_validator(mode="before")
@@ -37,14 +30,10 @@ class BaseMessage(SQLModel):
             return data
 
         jid = parse_jid(data["chat_jid"])
-
-        if jid.is_group():
-            data["group_jid"] = str(jid.to_non_ad())
-
         data["chat_jid"] = str(jid.to_non_ad())
         return data
 
-    @field_validator("group_jid", "sender_jid", mode="before")
+    @field_validator("sender_jid", mode="before")
     @classmethod
     def normalize(cls, value: Optional[str]) -> str | None:
         return normalize_jid(value) if value else None
@@ -58,9 +47,6 @@ class BaseMessage(SQLModel):
 
 class Message(BaseMessage, table=True):
     sender: Optional["Sender"] = Relationship(
-        back_populates="messages", sa_relationship_kwargs={"lazy": "selectin"}
-    )
-    group: Optional["Group"] = Relationship(
         back_populates="messages", sa_relationship_kwargs={"lazy": "selectin"}
     )
     replies: List["Message"] = Relationship(

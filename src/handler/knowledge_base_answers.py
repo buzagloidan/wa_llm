@@ -45,16 +45,7 @@ class KnowledgeBaseAnswers(BaseHandler):
             await voyage_embed_text(self.embedding_client, [rephrased_response.output])
         )[0]
 
-        select_from = None
-        if message.group:
-            select_from = [message.group]
-            if message.group.community_keys:
-                select_from.extend(
-                    await message.group.get_related_community_groups(self.session)
-                )
-
-        # Consider adding cosine distance threshold
-        # cosine_distance_threshold = 0.8
+        # Search company documentation for relevant topics
         limit_topics = 10
         # query for user query
         q = (
@@ -68,18 +59,12 @@ class KnowledgeBaseAnswers(BaseHandler):
             # .where(KBTopic.embedding.cosine_distance(embedded_question) < cosine_distance_threshold)
             .limit(limit_topics)
         )
-        if select_from:
-            q = q.where(
-                cast(KBTopic.group_jid, String).in_(
-                    [group.group_jid for group in select_from]
-                )
-            )
         retrieved_topics = await self.session.exec(q)
 
         similar_topics = []
         similar_topics_distances = []
         for kb_topic, topic_distance in retrieved_topics:  # Unpack the tuple
-            similar_topics.append(f"{kb_topic.subject} \n {kb_topic.summary}")
+            similar_topics.append(f"{kb_topic.subject} \n {kb_topic.content}")
             similar_topics_distances.append(f"topic_distance: {topic_distance}")
 
         sender_number = parse_jid(message.sender_jid).user
@@ -117,25 +102,31 @@ class KnowledgeBaseAnswers(BaseHandler):
         agent = Agent(
             model="gemini-2.5-flash",
             system_prompt="""
-            You are buza (בוזה), a sarcastic, edgy, and humorous AI parody account inspired by internet meme culture. 
-            Your phone number is @972559661544 - speak about yourself in first person (I, me, my), never in third person, do not tag yourself either.
-            Respond to all queries with sharp wit, Gen Z slang, and provocative black humor. 
-            Avoid conventional, polite, or politically correct answers. Use a chaotic, rebellious tone, poking fun at user queries. 
-            Keep responses short, snappy, and engaging, prioritizing entertainment over accuracy. 
-            When topics are attached, use them if relevant to write a casual, direct response. 
-            Do not repeat the query. Answer in the same language as the query. Provide everything the user needs to know, but keep it concise. 
-            If context from recent chat history is useful, incorporate it. 
-            Only answer with the newly phrased response — nothing else. """,
+            You are a helpful and knowledgeable representative of Jeen.ai, a cutting-edge AI platform company.
+            Your role is to assist enterprise employees with questions about how to use the Jeen.ai platform and provide information about the company and its services.
+            
+            Key guidelines:
+            - Be professional, friendly, and helpful
+            - Use the provided company documentation (Related Topics) to answer questions accurately
+            - If you don't have specific information in the documentation, acknowledge this and offer to help connect them with the right resources
+            - Keep responses clear, concise, and practical
+            - Focus on helping users understand and effectively use the Jeen.ai platform
+            - Answer in the same language as the user's query
+            - If the recent chat history provides useful context, incorporate it naturally
+            - Provide step-by-step guidance when explaining platform features or processes
+            
+            Remember: You represent Jeen.ai, so maintain a professional tone while being approachable and helpful.
+            """,
             )
 
         prompt_template = f"""
-        {f"@{sender}"}: {query}
+        User Query: {query}
         
         # Recent chat history:
         {chat2text(history)}
         
-        # Related Topics:
-        {"\n---\n".join(topics) if len(topics) > 0 else "No related topics found."}
+        # Jeen.ai Company Documentation (Related Topics):
+        {"\n---\n".join(topics) if len(topics) > 0 else "No related documentation found in our knowledge base. I can help connect you with additional resources."}
         """
 
         return await agent.run(prompt_template)
@@ -151,12 +142,12 @@ class KnowledgeBaseAnswers(BaseHandler):
     ) -> AgentRunResult[str]:
         rephrased_agent = Agent(
             model="gemini-2.5-flash",
-            system_prompt=f"""Phrase the following message as a short paragraph describing a query from the knowledge base.
+            system_prompt=f"""Rephrase the following user message as a clear, concise search query for finding relevant Jeen.ai company documentation.
             - Use English only!
-            - Ensure only to include the query itself. The message that includes a lot of information - focus on what the user asks you.
-            - Your name is @{my_jid}
-            - Attached is the recent chat history. You can use it to understand the context of the query. If the context is not clear or irrelevant to the query, ignore it.
-            - ONLY answer with the new phrased query, no other text!""",
+            - Focus on the core question or information need from the user
+            - Convert conversational language into a structured query suitable for knowledge base search
+            - Use the chat history for context if relevant, but focus on the main query
+            - Return only the rephrased search query, no additional text!""",
         )
 
         # We obviously need to translate the question and turn the question vebality to a title / summary text to make it closer to the questions in the rag

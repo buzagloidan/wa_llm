@@ -14,32 +14,43 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/load_new_kbtopics")
-async def load_new_kbtopics_api(
+from pydantic import BaseModel
+from typing import List
+
+class DocumentUpload(BaseModel):
+    title: str
+    content: str
+    source: str = "manual_upload"
+
+@router.post("/load_company_documentation")
+async def load_company_documentation_api(
+    documents: List[DocumentUpload],
     session: Annotated[AsyncSession, Depends(get_db_async_session)],
-    whatsapp: Annotated[WhatsAppClient, Depends(get_whatsapp)],
     embedding_client: Annotated[AsyncClient, Depends(get_text_embebedding)],
 ) -> Dict[str, Any]:
     """
-    Trigger load new kbtopics for all managed groups.
+    Load company documentation into the knowledge base.
+    Accepts a list of documents with title, content, and optional source.
     Returns a success message upon completion.
     """
     try:
-        logger.info("Starting load new kbtopics sync via API")
+        logger.info(f"Loading {len(documents)} company documents via API")
 
-        topics_loader = topicsLoader()
-        await topics_loader.load_topics_for_all_groups(
-            session, embedding_client, whatsapp
+        from load_new_kbtopics import CompanyDocumentLoader
+        doc_loader = CompanyDocumentLoader()
+        loaded_count = await doc_loader.load_documents(
+            session, embedding_client, documents
         )
 
-        logger.info("load new kbtopics sync completed successfully")
+        logger.info(f"Company documentation loading completed successfully. Loaded {loaded_count} documents.")
 
         return {
             "status": "success",
-            "message": "load new kbtopics sync completed successfully",
+            "message": f"Successfully loaded {loaded_count} company documents into knowledge base",
+            "documents_processed": loaded_count
         }
 
     except Exception as e:
-        logger.error(f"Error during load new kbtopics sync: {str(e)}")
+        logger.error(f"Error during company documentation loading: {str(e)}")
         # Re-raise the exception to let FastAPI handle it with proper error response
         raise

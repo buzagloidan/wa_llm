@@ -4,11 +4,9 @@ from voyageai.client_async import AsyncClient
 
 from models import (
     WhatsAppWebhookPayload,
-    BaseGroup,
     BaseSender,
     Message,
     Sender,
-    Group,
     BaseMessage,
     upsert,
 )
@@ -64,12 +62,6 @@ class BaseHandler:
                     self.session.flush()
                 )  # Ensure sender is visible in this transaction
 
-            if message.group_jid:
-                group = await self.session.get(Group, message.group_jid)
-                if group is None:
-                    group = Group(**BaseGroup(group_jid=message.group_jid, managed=True, notify_on_spam=True).model_dump())
-                    await self.upsert(group)
-                    await self.session.flush()
 
             # Finally add the message
             return await self.upsert(message)

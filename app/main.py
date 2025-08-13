@@ -15,7 +15,7 @@ early_logger = logging.getLogger("main")
 early_logger.setLevel(logging.INFO)
 
 try:
-    from api import load_new_kbtopics_api, status, summarize_and_send_to_group_api, webhook
+    from api import load_new_kbtopics_api, status, webhook
     early_logger.info("Successfully imported all API modules")
 except ImportError as e:
     early_logger.error(f"Failed to import API modules: {e}")
@@ -23,7 +23,6 @@ except ImportError as e:
 import models  # noqa
 from config import Settings
 from whatsapp import WhatsAppClient
-from whatsapp.init_groups import gather_groups
 from voyageai.client_async import AsyncClient
 
 settings = Settings()  # pyright: ignore [reportCallIssue]
@@ -63,7 +62,6 @@ async def lifespan(app: FastAPI):
         engine, expire_on_commit=False, class_=AsyncSession
     )
 
-    asyncio.create_task(gather_groups(engine, app.state.whatsapp))
 
     app.state.db_engine = engine
     app.state.async_session = async_session
@@ -93,9 +91,6 @@ app.include_router(webhook.router)
 
 logging.info(f"Status router has {len(status.router.routes)} routes") 
 app.include_router(status.router)
-
-logging.info(f"Summarize router has {len(summarize_and_send_to_group_api.router.routes)} routes")
-app.include_router(summarize_and_send_to_group_api.router)
 
 logging.info(f"Load topics router has {len(load_new_kbtopics_api.router.routes)} routes")
 app.include_router(load_new_kbtopics_api.router)

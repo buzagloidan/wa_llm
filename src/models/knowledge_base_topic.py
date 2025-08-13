@@ -6,18 +6,14 @@ from sqlmodel import Field, SQLModel, Index, Column, DateTime
 
 
 class KBTopicBase(SQLModel):
-    group_jid: Optional[str] = Field(
-        max_length=255,
-        foreign_key="group.group_jid",
-    )
     start_time: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-    # TODO: Turn into sender_jids: List[str]. Should we normalize jids into a JID object? I don't think so.
-    speakers: str
+    # Company documentation topic/source
+    source: str
     subject: str
-    summary: str
+    content: str
 
 
 class KBTopicCreate(KBTopicBase):

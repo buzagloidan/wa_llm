@@ -16,7 +16,7 @@ from tenacity import (
 )
 from voyageai.client_async import AsyncClient
 
-from models import KBTopicCreate, Group, Message
+from models import KBTopicCreate, Message
 from models.knowledge_base_topic import KBTopic
 from models.upsert import bulk_upsert
 from utils.voyage_embed_text import voyage_embed_text
@@ -206,6 +206,60 @@ class topicsLoader:
         embedding_client: AsyncClient,
         whatsapp: WhatsAppClient,
     ):
-        groups = await session.exec(select(Group).where(Group.managed == True))  # noqa: E712 https://stackoverflow.com/a/18998106
-        for group in list(groups.all()):
-            await self.load_topics(session, group, embedding_client, whatsapp)
+        # This method is deprecated since we no longer work with groups
+        logger.warning("load_topics_for_all_groups is deprecated. Use CompanyDocumentLoader instead.")
+
+
+class CompanyDocumentLoader:
+    """Loader for company documentation into the knowledge base."""
+    
+    async def load_documents(
+        self,
+        session: AsyncSession,
+        embedding_client: AsyncClient,
+        documents: List[any],  # DocumentUpload from the API
+    ) -> int:
+        """
+        Load company documents into the knowledge base.
+        
+        Args:
+            session: Database session
+            embedding_client: Embedding client for generating vectors
+            documents: List of DocumentUpload objects with title, content, and source
+            
+        Returns:
+            Number of documents successfully loaded
+        """
+        if not documents:
+            return 0
+            
+        logger.info(f"Processing {len(documents)} company documents for embedding")
+        
+        # Prepare documents for embedding
+        document_texts = [f"# {doc.title}\n{doc.content}" for doc in documents]
+        embeddings = await voyage_embed_text(embedding_client, document_texts)
+        
+        # Create KBTopic entries
+        kb_topics = []
+        current_time = datetime.now()
+        
+        for doc, embedding in zip(documents, embeddings):
+            # Create a unique ID based on title and content hash
+            doc_id = hashlib.sha256(f"{doc.title}_{doc.content}".encode()).hexdigest()
+            
+            kb_topic = KBTopic(
+                id=doc_id,
+                embedding=embedding,
+                start_time=current_time,
+                source=doc.source,
+                subject=doc.title,
+                content=doc.content
+            )
+            kb_topics.append(kb_topic)
+        
+        # Bulk insert the documents
+        await bulk_upsert(session, kb_topics)
+        await session.commit()
+        
+        logger.info(f"Successfully loaded {len(kb_topics)} company documents into knowledge base")
+        return len(kb_topics)
