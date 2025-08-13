@@ -77,12 +77,23 @@ async def fix_database_schema(
         
         # Get a new engine for schema creation (synchronous)
         settings = Settings()
-        sync_db_uri = settings.db_uri.replace('+asyncpg', '').replace('postgresql+asyncpg://', 'postgresql://')
+        # Convert async URI to sync URI  
+        sync_db_uri = settings.db_uri
+        if '+asyncpg' in sync_db_uri:
+            sync_db_uri = sync_db_uri.replace('+asyncpg', '')
         temp_engine = create_engine(sync_db_uri)
         
         # Create tables synchronously
-        SQLModel.metadata.create_all(temp_engine)
-        temp_engine.dispose()
+        try:
+            logger.info(f"Creating schema with URI: {sync_db_uri[:50]}...")
+            SQLModel.metadata.create_all(temp_engine)
+            logger.info("Schema creation completed successfully")
+        except Exception as schema_error:
+            logger.error(f"Schema creation failed: {schema_error}")
+            temp_engine.dispose()
+            raise HTTPException(status_code=500, detail=f"Schema creation failed: {str(schema_error)}")
+        finally:
+            temp_engine.dispose()
             
         logger.info("Database schema fixed successfully")
         
