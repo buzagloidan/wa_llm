@@ -25,7 +25,13 @@ from config import Settings
 from whatsapp import WhatsAppClient
 from voyageai.client_async import AsyncClient
 
-settings = Settings()  # pyright: ignore [reportCallIssue]
+try:
+    settings = Settings()  # pyright: ignore [reportCallIssue]
+    early_logger.info("Settings loaded successfully")
+except Exception as e:
+    early_logger.error(f"Failed to load settings: {e}")
+    early_logger.error("Check that all required environment variables are set in Railway")
+    raise
 
 
 @asynccontextmanager
@@ -96,6 +102,17 @@ logging.info(f"Load topics router has {len(load_new_kbtopics_api.router.routes)}
 app.include_router(load_new_kbtopics_api.router)
 
 logging.info("All API routes registered successfully")
+
+# Add simple root endpoint for debugging
+@app.get("/")
+async def root():
+    """Simple root endpoint to verify app is running."""
+    return {
+        "message": "Jeen.ai Company Representative Bot is running",
+        "status": "healthy",
+        "version": "2.0",
+        "transformation": "WhatsApp Group Bot -> Jeen.ai Company Representative"
+    }
 
 if __name__ == "__main__":
     import uvicorn
