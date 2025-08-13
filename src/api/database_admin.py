@@ -64,8 +64,8 @@ async def fix_database_schema(
     """Fix database schema by dropping old tables and creating new ones."""
     logger.info("=== DATABASE SCHEMA FIX STARTED ===")
     try:
-        # Drop old conflicting tables more aggressively
-        old_tables = ['group', 'alembic_version']
+        # Drop old conflicting tables AND recreate kbtopic with new schema
+        old_tables = ['group', 'alembic_version', 'kbtopic']  # Include kbtopic to force recreation
         dropped_tables = []
         
         for table in old_tables:
@@ -125,6 +125,25 @@ async def fix_database_schema(
                 # Use run_sync to execute the synchronous create_all method
                 await conn.run_sync(SQLModel.metadata.create_all)
             logger.info("Schema creation completed successfully")
+            
+            # Verify the kbtopic table has the correct schema
+            verify_result = await session.exec(text("""
+                SELECT column_name, data_type 
+                FROM information_schema.columns 
+                WHERE table_name = 'kbtopic' AND table_schema = 'public'
+                ORDER BY column_name
+            """))
+            columns = verify_result.fetchall()
+            logger.info(f"kbtopic table columns: {columns}")
+            
+            # Check if source column exists
+            has_source = any(col[0] == 'source' for col in columns)
+            if has_source:
+                logger.info("✅ kbtopic table has 'source' column - schema is correct")
+            else:
+                logger.error("❌ kbtopic table missing 'source' column - schema fix failed")
+                raise HTTPException(status_code=500, detail="kbtopic table schema is incorrect")
+                
         except Exception as schema_error:
             logger.error(f"Schema creation failed: {schema_error}")
             raise HTTPException(status_code=500, detail=f"Schema creation failed: {str(schema_error)}")
