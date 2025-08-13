@@ -14,7 +14,13 @@ router = APIRouter()
 @router.get("/readiness")
 async def readiness() -> Dict[str, str]:
     """Simple readiness check that returns immediately."""
-    return {"status": "ok"}
+    import os
+    return {
+        "status": "ok",
+        "service": "jeen-ai-bot", 
+        "port": os.getenv("PORT", "8080"),
+        "message": "Jeen.ai Company Representative Bot is ready"
+    }
 
 
 @router.get("/status")

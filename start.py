@@ -55,33 +55,53 @@ def main():
     print("=" * 50)
     
     # Check environment
-    if not check_environment():
-        print("💥 Environment check failed")
-        sys.exit(1)
+    env_ok = check_environment()
+    imports_ok = asyncio.run(test_imports()) if env_ok else False
     
-    # Test imports
-    if not asyncio.run(test_imports()):
-        print("💥 Import test failed") 
-        sys.exit(1)
+    # Get port from environment (Railway sets this)
+    port = int(os.getenv("PORT", 8080))
+    print(f"🚀 Starting server on 0.0.0.0:{port}")
     
-    print("✅ All checks passed! Starting main application...")
-    print("=" * 50)
+    # Try to start the application
+    import uvicorn
     
-    # Import and run the main app
-    try:
-        import uvicorn
-        
-        # Run the FastAPI app
-        uvicorn.run(
-            "app.main:app",
-            host="0.0.0.0", 
-            port=int(os.getenv("PORT", 8080)),
-            log_level="info"
-        )
-        
-    except Exception as e:
-        print(f"💥 Failed to start application: {e}")
-        sys.exit(1)
+    # If environment/imports failed, start minimal version
+    if not env_ok or not imports_ok:
+        print("⚠️ Starting in minimal mode due to configuration issues...")
+        try:
+            uvicorn.run(
+                "app.main_minimal:app",
+                host="0.0.0.0", 
+                port=port,
+                log_level="info",
+                access_log=True
+            )
+        except Exception as e:
+            print(f"💥 Failed to start minimal app: {e}")
+            sys.exit(1)
+    else:
+        print("✅ All checks passed! Starting full application...")
+        try:
+            uvicorn.run(
+                "app.main:app",
+                host="0.0.0.0", 
+                port=port,
+                log_level="info",
+                access_log=True
+            )
+        except Exception as e:
+            print(f"💥 Failed to start full app: {e}")
+            print("🔄 Falling back to minimal mode...")
+            try:
+                uvicorn.run(
+                    "app.main_minimal:app",
+                    host="0.0.0.0", 
+                    port=port,
+                    log_level="info"
+                )
+            except Exception as e2:
+                print(f"💥 Failed to start minimal app: {e2}")
+                sys.exit(1)
 
 if __name__ == "__main__":
     main()
