@@ -70,6 +70,9 @@ async def fix_database_schema(
         
         for table in old_tables:
             try:
+                # Start a new transaction for each table
+                await session.begin()
+                
                 # Check if table exists first
                 check_result = await session.exec(text(
                     "SELECT table_name FROM information_schema.tables "
@@ -80,37 +83,39 @@ async def fix_database_schema(
                 if existing:
                     logger.info(f"Table {table} exists, attempting to drop...")
                     
-                    # Try multiple approaches to drop the table
+                    # Try to drop the table (quote name for reserved keywords)
                     try:
-                        await session.exec(text(f"DROP TABLE {table} CASCADE"))
-                    except Exception as cascade_error:
-                        logger.warning(f"CASCADE drop failed for {table}: {cascade_error}")
-                        try:
-                            # Try without CASCADE
-                            await session.exec(text(f"DROP TABLE {table}"))
-                        except Exception as simple_error:
-                            logger.warning(f"Simple drop failed for {table}: {simple_error}")
-                    
-                    # Verify the table was actually dropped
-                    verify_result = await session.exec(text(
-                        "SELECT table_name FROM information_schema.tables "
-                        f"WHERE table_schema = 'public' AND table_name = '{table}'"
-                    ))
-                    still_remaining = verify_result.fetchall()
-                    
-                    if not still_remaining:
-                        dropped_tables.append(table)
-                        logger.info(f"✅ Successfully dropped table: {table}")
-                    else:
-                        logger.error(f"❌ Table {table} still exists after DROP attempts")
+                        await session.exec(text(f'DROP TABLE "{table}" CASCADE'))
+                        await session.commit()
+                        
+                        # Verify the table was actually dropped
+                        verify_result = await session.exec(text(
+                            "SELECT table_name FROM information_schema.tables "
+                            f"WHERE table_schema = 'public' AND table_name = '{table}'"
+                        ))
+                        still_remaining = verify_result.fetchall()
+                        
+                        if not still_remaining:
+                            dropped_tables.append(table)
+                            logger.info(f"✅ Successfully dropped table: {table}")
+                        else:
+                            logger.error(f"❌ Table {table} still exists after DROP")
+                            
+                    except Exception as drop_error:
+                        logger.warning(f"Failed to drop {table}: {drop_error}")
+                        await session.rollback()
                 else:
                     logger.info(f"Table {table} does not exist (already dropped)")
+                    await session.commit()
                     
             except Exception as e:
                 logger.error(f"Error processing table {table}: {e}")
+                try:
+                    await session.rollback()
+                except:
+                    pass
         
-        await session.commit()
-        logger.info(f"Attempted to drop tables. Successfully dropped: {dropped_tables}")
+        logger.info(f"Drop phase complete. Successfully dropped: {dropped_tables}")
         
         # Create new tables using the app's existing database engine
         logger.info("Using app's existing database engine for schema creation")
