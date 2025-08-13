@@ -47,6 +47,8 @@ class KnowledgeBaseAnswers(BaseHandler):
 
         # Search company documentation for relevant topics
         limit_topics = 10
+        cosine_distance_threshold = 0.7  # Threshold for considering a topic relevant
+        
         # query for user query
         q = (
             select(
@@ -56,20 +58,24 @@ class KnowledgeBaseAnswers(BaseHandler):
                 ),
             )
             .order_by(KBTopic.embedding.cosine_distance(embedded_question))
-            # .where(KBTopic.embedding.cosine_distance(embedded_question) < cosine_distance_threshold)
+            .where(KBTopic.embedding.cosine_distance(embedded_question) < cosine_distance_threshold)
             .limit(limit_topics)
         )
         retrieved_topics = await self.session.exec(q)
 
         similar_topics = []
         similar_topics_distances = []
+        has_relevant_docs = False
+        
         for kb_topic, topic_distance in retrieved_topics:  # Unpack the tuple
             similar_topics.append(f"{kb_topic.subject} \n {kb_topic.content}")
             similar_topics_distances.append(f"topic_distance: {topic_distance}")
+            if topic_distance < 0.5:  # High relevance threshold
+                has_relevant_docs = True
 
         sender_number = parse_jid(message.sender_jid).user
         generation_response = await self.generation_agent(
-            message.text, similar_topics, message.sender_jid, history
+            message.text, similar_topics, message.sender_jid, history, has_relevant_docs
         )
         logger.info(
             "RAG Query Results:\n"
@@ -97,37 +103,74 @@ class KnowledgeBaseAnswers(BaseHandler):
         reraise=True,
     )
     async def generation_agent(
-        self, query: str, topics: list[str], sender: str, history: List[Message]
+        self, query: str, topics: list[str], sender: str, history: List[Message], has_relevant_docs: bool = False
     ) -> AgentRunResult[str]:
-        agent = Agent(
-            model="gemini-2.5-flash",
-            system_prompt="""
+        # Create dynamic system prompt based on whether we have relevant documentation
+        if has_relevant_docs and topics:
+            system_prompt = """
             You are a helpful and knowledgeable representative of Jeen.ai, a cutting-edge AI platform company.
-            Your role is to assist enterprise employees with questions about how to use the Jeen.ai platform and provide information about the company and its services.
+            Your role is to assist enterprise employees with questions about how to use the Jeen.ai platform.
+            
+            IMPORTANT: You have access to highly relevant company documentation below. Use this information to provide accurate, detailed responses.
+            
+            Key guidelines:
+            - Base your response primarily on the provided documentation
+            - Be professional, friendly, and helpful
+            - Provide step-by-step guidance when explaining features
+            - If documentation covers the topic well, give comprehensive answers
+            - Answer in the same language as the user's query
+            - Reference specific features or sections from the documentation when relevant
+            
+            The documentation provided is highly relevant to the user's question - use it comprehensively.
+            """
+        else:
+            system_prompt = """
+            You are a helpful and knowledgeable representative of Jeen.ai, a cutting-edge AI platform company.
+            Your role is to assist enterprise employees with general questions about Jeen.ai.
+            
+            IMPORTANT: No highly relevant documentation was found for this specific query, so provide general helpful responses.
             
             Key guidelines:
             - Be professional, friendly, and helpful
-            - Use the provided company documentation (Related Topics) to answer questions accurately
-            - If you don't have specific information in the documentation, acknowledge this and offer to help connect them with the right resources
-            - Keep responses clear, concise, and practical
-            - Focus on helping users understand and effectively use the Jeen.ai platform
+            - Provide general information about Jeen.ai as an AI platform company
+            - If you don't have specific information, acknowledge this politely
+            - Offer to help connect them with the right resources or support team
+            - Suggest they check the documentation or contact support for detailed technical questions
+            - Keep responses helpful but acknowledge limitations when you don't have specific information
             - Answer in the same language as the user's query
-            - If the recent chat history provides useful context, incorporate it naturally
-            - Provide step-by-step guidance when explaining platform features or processes
             
-            Remember: You represent Jeen.ai, so maintain a professional tone while being approachable and helpful.
-            """,
+            Since no highly relevant documentation was found, be helpful but acknowledge when you need to refer them to specific resources.
+            """
+
+        agent = Agent(
+            model="gemini-2.5-flash",
+            system_prompt=system_prompt,
             )
 
-        prompt_template = f"""
-        User Query: {query}
-        
-        # Recent chat history:
-        {chat2text(history)}
-        
-        # Jeen.ai Company Documentation (Related Topics):
-        {"\n---\n".join(topics) if len(topics) > 0 else "No related documentation found in our knowledge base. I can help connect you with additional resources."}
-        """
+        if has_relevant_docs and topics:
+            prompt_template = f"""
+            User Query: {query}
+            
+            # Recent chat history:
+            {chat2text(history)}
+            
+            # Highly Relevant Jeen.ai Documentation:
+            {"\n---\n".join(topics)}
+            
+            The above documentation is highly relevant to the user's question. Use it to provide a comprehensive, accurate response.
+            """
+        else:
+            prompt_template = f"""
+            User Query: {query}
+            
+            # Recent chat history:
+            {chat2text(history)}
+            
+            # Available Documentation:
+            {"\n---\n".join(topics) if len(topics) > 0 else "No highly relevant documentation found for this specific query."}
+            
+            Note: The available documentation may not be highly relevant to this specific question. Provide general Jeen.ai information and suggest appropriate resources.
+            """
 
         return await agent.run(prompt_template)
 

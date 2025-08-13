@@ -54,3 +54,44 @@ async def load_company_documentation_api(
         logger.error(f"Error during company documentation loading: {str(e)}")
         # Re-raise the exception to let FastAPI handle it with proper error response
         raise
+
+@router.post("/process_all_documentation")
+async def process_all_documentation_api(
+    session: Annotated[AsyncSession, Depends(get_db_async_session)],
+    embedding_client: Annotated[AsyncClient, Depends(get_text_embebedding)],
+) -> Dict[str, Any]:
+    """
+    Process all documents from the /documentation folder and upload to knowledge base.
+    Extracts content from .docx, .pdf, .txt, and .md files.
+    """
+    try:
+        logger.info("Starting processing of all documentation files...")
+
+        from document_processor import process_and_upload_documents
+        
+        # Process and upload all documents
+        loaded_count = await process_and_upload_documents(
+            embedding_client, session, "documentation"
+        )
+
+        logger.info(f"Documentation processing completed. Loaded {loaded_count} documents.")
+
+        return {
+            "status": "success",
+            "message": f"Successfully processed and loaded {loaded_count} documents from /documentation folder",
+            "documents_processed": loaded_count,
+            "source_directory": "documentation/",
+            "supported_formats": [".docx", ".pdf", ".txt", ".md"]
+        }
+
+    except ImportError as e:
+        logger.error(f"Missing required libraries: {e}")
+        return {
+            "status": "error",
+            "message": f"Missing required libraries for document processing: {str(e)}",
+            "suggestion": "Install required packages: pip install python-docx PyPDF2"
+        }
+    except Exception as e:
+        logger.error(f"Error during documentation processing: {str(e)}")
+        # Re-raise the exception to let FastAPI handle it with proper error response
+        raise
