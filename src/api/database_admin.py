@@ -16,6 +16,11 @@ from .deps import get_db_async_session
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+@router.get("/admin/test")
+async def test_endpoint() -> Dict[str, Any]:
+    """Simple test endpoint to verify connectivity."""
+    return {"status": "success", "message": "Database admin endpoints are working"}
+
 @router.get("/admin/database/status")
 async def database_status(
     session: Annotated[AsyncSession, Depends(get_db_async_session)],
@@ -56,6 +61,7 @@ async def fix_database_schema(
     session: Annotated[AsyncSession, Depends(get_db_async_session)],
 ) -> Dict[str, Any]:
     """Fix database schema by dropping old tables and creating new ones."""
+    logger.info("=== DATABASE SCHEMA FIX STARTED ===")
     try:
         # Drop old conflicting tables
         old_tables = ['group', 'alembic_version']
@@ -105,8 +111,12 @@ async def fix_database_schema(
         }
         
     except Exception as e:
-        logger.error(f"Database schema fix failed: {e}")
-        await session.rollback()
+        logger.error(f"=== DATABASE SCHEMA FIX FAILED === Error: {e}")
+        logger.exception("Full traceback:")
+        try:
+            await session.rollback()
+        except:
+            pass
         raise HTTPException(status_code=500, detail=f"Schema fix failed: {str(e)}")
 
 @router.post("/admin/database/clear-data")

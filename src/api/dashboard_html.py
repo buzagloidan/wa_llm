@@ -170,6 +170,7 @@ async def dashboard_html(
             <div class="admin-section">
                 <h2>Database Management</h2>
                 <div class="admin-buttons">
+                    <button class="admin-button" onclick="testConnectivity()">Test Connectivity</button>
                     <button class="admin-button" onclick="checkDatabaseStatus()">Check Database Status</button>
                     <button class="admin-button" onclick="fixDatabaseSchema()">Fix Database Schema</button>
                     <button class="admin-button success" onclick="processAllDocuments()">Process All Documents</button>
@@ -329,6 +330,18 @@ async def dashboard_html(
             }}
 
             // Admin functions
+            async function testConnectivity() {{
+                const output = document.getElementById('admin-output');
+                output.innerHTML = 'Testing connectivity...';
+                
+                try {{
+                    const result = await apiCall('/admin/test');
+                    output.innerHTML = `<span style="color: green;">✅ ${{result.message}}</span>`;
+                }} catch (error) {{
+                    output.innerHTML = `<span style="color: red;">❌ Connectivity Error: ${{error.message}}</span>`;
+                }}
+            }}
+
             async function checkDatabaseStatus() {{
                 const output = document.getElementById('admin-output');
                 output.innerHTML = 'Checking database status...';
