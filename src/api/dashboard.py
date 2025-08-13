@@ -41,8 +41,7 @@ async def get_topics(
         count_query = select(func.count(KBTopic.id))
         if source:
             count_query = count_query.where(KBTopic.source == source)
-        count_result = await session.exec(count_query)
-        total_count = count_result.scalar()
+        total_count = await session.scalar(count_query)
         
         # Get unique sources for filtering
         sources_query = select(KBTopic.source).distinct()
@@ -114,8 +113,7 @@ async def get_dashboard_stats(
     try:
         # Total topics count
         total_query = select(func.count(KBTopic.id))
-        total_result = await session.exec(total_query)
-        total_topics = total_result.scalar()
+        total_topics = await session.scalar(total_query)
         
         # Topics by source
         source_query = select(KBTopic.source, func.count(KBTopic.id)).group_by(KBTopic.source)
@@ -124,8 +122,7 @@ async def get_dashboard_stats(
         
         # Average content length
         avg_length_query = select(func.avg(func.length(KBTopic.content)))
-        avg_length_result = await session.exec(avg_length_query)
-        avg_content_length = avg_length_result.scalar() or 0
+        avg_content_length = await session.scalar(avg_length_query) or 0
         
         return {
             "total_topics": total_topics,
