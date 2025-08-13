@@ -216,8 +216,16 @@ class CompanyDocumentLoader:
             
         logger.info(f"Processing {len(documents)} company documents for embedding")
         
-        # Prepare documents for embedding
-        document_texts = [f"# {doc.title}\n{doc.content}" for doc in documents]
+        # Prepare documents for embedding (handle both dict and object formats)
+        document_texts = []
+        for doc in documents:
+            if isinstance(doc, dict):
+                title = doc.get("title", "Unknown")
+                content = doc.get("content", "")
+            else:
+                title = getattr(doc, "title", "Unknown")
+                content = getattr(doc, "content", "")
+            document_texts.append(f"# {title}\n{content}")
         embeddings = await voyage_embed_text(embedding_client, document_texts)
         
         # Create KBTopic entries
@@ -225,16 +233,26 @@ class CompanyDocumentLoader:
         current_time = datetime.now()
         
         for doc, embedding in zip(documents, embeddings):
+            # Handle both dict and object formats
+            if isinstance(doc, dict):
+                title = doc.get("title", "Unknown")
+                content = doc.get("content", "")
+                source = doc.get("source", "unknown")
+            else:
+                title = getattr(doc, "title", "Unknown")
+                content = getattr(doc, "content", "")
+                source = getattr(doc, "source", "unknown")
+            
             # Create a unique ID based on title and content hash
-            doc_id = hashlib.sha256(f"{doc.title}_{doc.content}".encode()).hexdigest()
+            doc_id = hashlib.sha256(f"{title}_{content}".encode()).hexdigest()
             
             kb_topic = KBTopic(
                 id=doc_id,
                 embedding=embedding,
                 start_time=current_time,
-                source=doc.source,
-                subject=doc.title,
-                content=doc.content
+                source=source,
+                subject=title,
+                content=content
             )
             kb_topics.append(kb_topic)
         
