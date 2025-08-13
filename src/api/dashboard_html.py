@@ -211,10 +211,17 @@ async def dashboard_html(
         <script>
             const baseUrl = '{base_url}';
             let currentTopics = [];
+            
+            // Debug: show the base URL
+            console.log('Base URL:', baseUrl);
 
             async function apiCall(endpoint, options = {{}}) {{
                 try {{
-                    const response = await fetch(`${{baseUrl}}${{endpoint}}`, {{
+                    // Use relative URLs instead of base_url to avoid cross-origin issues
+                    const url = endpoint.startsWith('/') ? endpoint : `/${{endpoint}}`;
+                    console.log('Making API call to:', url);
+                    
+                    const response = await fetch(url, {{
                         headers: {{
                             'Content-Type': 'application/json',
                             ...options.headers
@@ -229,6 +236,7 @@ async def dashboard_html(
                     return await response.json();
                 }} catch (error) {{
                     console.error('API Error:', error);
+                    console.error('Failed URL:', url);
                     throw error;
                 }}
             }}
