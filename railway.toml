@@ -5,18 +5,7 @@ builder = "dockerfile"
 healthcheckPath = "/readiness"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
+startCommand = "python start.py"
 
 [[services]]
-name = "wallm-web"
-
-[[services]]
-name = "daily-topics-loading"
-type = "cron"
-cronSchedule = "0 16 * * *"
-startCommand = "python app/load_new_kbtopics_task.py"
-
-[[services]]
-name = "daily-summary"  
-type = "cron"
-cronSchedule = "0 18 * * *"
-startCommand = "python app/summarize_and_send_to_groups_task.py"
+name = "jeen-ai-bot"

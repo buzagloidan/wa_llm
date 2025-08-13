@@ -9,4 +9,5 @@ COPY . .
 
 ENV PYTHONPATH="/app/src:${PYTHONPATH:-}"
 
-CMD alembic upgrade head && python app/main.py
+# Use the startup script for better error handling
+CMD python start.py
