@@ -90,7 +90,7 @@ SAMPLE_DOCS = [
     }
 ]
 
-async def upload_documentation(base_url: str = "http://localhost:8080") -> bool:
+async def upload_documentation(base_url: str = "https://wallm-production.up.railway.app") -> bool:
     """Upload sample company documentation to the knowledge base."""
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:

@@ -15,7 +15,7 @@ early_logger = logging.getLogger("main")
 early_logger.setLevel(logging.INFO)
 
 try:
-    from api import load_new_kbtopics_api, status, webhook
+    from api import load_new_kbtopics_api, status, webhook, database_admin
     early_logger.info("Successfully imported all API modules")
 except ImportError as e:
     early_logger.error(f"Failed to import API modules: {e}")
@@ -100,6 +100,9 @@ app.include_router(status.router)
 
 logging.info(f"Load topics router has {len(load_new_kbtopics_api.router.routes)} routes")
 app.include_router(load_new_kbtopics_api.router)
+
+logging.info(f"Database admin router has {len(database_admin.router.routes)} routes")
+app.include_router(database_admin.router)
 
 logging.info("All API routes registered successfully")
 
