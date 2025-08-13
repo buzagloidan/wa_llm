@@ -335,10 +335,19 @@ async def dashboard_html(
                 output.innerHTML = 'Testing connectivity...';
                 
                 try {{
-                    const result = await apiCall('/admin/test');
-                    output.innerHTML = `<span style="color: green;">✅ ${{result.message}}</span>`;
+                    // Test main app endpoint first
+                    const result = await apiCall('/debug-test');
+                    output.innerHTML = `<span style="color: green;">✅ Main app: ${{result.message}}</span>`;
+                    
+                    // Then test admin endpoint
+                    try {{
+                        const adminResult = await apiCall('/admin/test');
+                        output.innerHTML += `<br><span style="color: green;">✅ Admin: ${{adminResult.message}}</span>`;
+                    }} catch (adminError) {{
+                        output.innerHTML += `<br><span style="color: red;">❌ Admin Error: ${{adminError.message}}</span>`;
+                    }}
                 }} catch (error) {{
-                    output.innerHTML = `<span style="color: red;">❌ Connectivity Error: ${{error.message}}</span>`;
+                    output.innerHTML = `<span style="color: red;">❌ Main App Error: ${{error.message}}</span>`;
                 }}
             }}
 

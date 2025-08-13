@@ -102,6 +102,8 @@ logging.info(f"Load topics router has {len(load_new_kbtopics_api.router.routes)}
 app.include_router(load_new_kbtopics_api.router)
 
 logging.info(f"Database admin router has {len(database_admin.router.routes)} routes")
+for route in database_admin.router.routes:
+    logging.info(f"  Database admin route: {route.path} ({route.methods if hasattr(route, 'methods') else 'N/A'})")
 app.include_router(database_admin.router)
 
 logging.info(f"Dashboard router has {len(dashboard.router.routes)} routes")
@@ -122,6 +124,11 @@ async def root():
         "version": "2.0",
         "transformation": "WhatsApp Group Bot -> Jeen.ai Company Representative"
     }
+
+@app.get("/debug-test")
+async def debug_test():
+    """Debug endpoint to test connectivity."""
+    return {"status": "success", "message": "Debug endpoint is working"}
 
 if __name__ == "__main__":
     import uvicorn
