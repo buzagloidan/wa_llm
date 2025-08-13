@@ -125,9 +125,10 @@ async def get_conversation_topics(
     ]
 
 
-async def load_topics(
+# This function is deprecated - kept for compatibility but not used
+async def load_topics_deprecated(
     db_session: AsyncSession,
-    group: Group,
+    group: any,  # Was Group, now deprecated
     embedding_client: AsyncClient,
     topics: List[Topic],
     start_time: datetime,
@@ -143,14 +144,13 @@ async def load_topics(
         KBTopicCreate(
             id=str(
                 hashlib.sha256(
-                    f"{group.group_jid}_{start_time}_{topic.subject}".encode()
+                    f"deprecated_{start_time}_{topic.subject}".encode()
                 ).hexdigest()
             ),
             embedding=emb,
-            group_jid=group.group_jid,
             start_time=start_time,
-            speakers=",".join(topic._speaker_map.values()),
-            summary=_deid_text(topic.summary, topic._speaker_map),
+            source="deprecated_group_loader",
+            content=_deid_text(topic.summary, topic._speaker_map),
             subject=_deid_text(topic.subject, topic._speaker_map),
         )
         for topic, emb in zip(topics, topics_embeddings)
@@ -158,46 +158,27 @@ async def load_topics(
     # Once we give a meaningfull ID, we should migrate to upsert!
     await bulk_upsert(db_session, [KBTopic(**doc.model_dump()) for doc in doc_models])
 
-    # Update the group with the new last_ingest
-    group.last_ingest = datetime.now()
-    db_session.add(group)
+    # This function is deprecated - no group updates needed
     await db_session.commit()
 
 
 class topicsLoader:
+    # Deprecated class - replaced by CompanyDocumentLoader
     async def load_topics(
         self,
         db_session: AsyncSession,
-        group: Group,
+        group: any,  # Was Group, now deprecated
         embedding_client: AsyncClient,
         whatsapp: WhatsAppClient,
     ):
         my_jid = await whatsapp.get_my_jid()
         try:
             # Since yesterday at 12:00 UTC. Between 24 hours to 48 hours ago
-            stmt = (
-                select(Message)
-                .where(Message.timestamp >= group.last_ingest)
-                .where(Message.group_jid == group.group_jid)
-                .where(Message.sender_jid != my_jid.normalize_str())
-                .order_by(desc(Message.timestamp))
-            )
-            res = await db_session.exec(stmt)
-            # Convert Sequence to list explicitly
-            messages = list(res.all())
-
-            if len(messages) == 0:
-                logger.info(f"No messages found for group {group.group_name}")
-                return
-
-            # The result is ordered by timestamp, so the first message is the oldest
-            start_time = messages[0].timestamp
-            topics = await get_conversation_topics(messages, my_jid.user)
-            logger.info(f"Loaded {len(topics)} topics for group {group.group_name}")
-            await load_topics(db_session, group, embedding_client, topics, start_time)
-            logger.info(f"topics loaded for group {group.group_name}")
+            # This method is deprecated - Group model no longer exists
+            logger.warning("topicsLoader.load_topics is deprecated - use CompanyDocumentLoader instead")
+            return
         except Exception as e:
-            logger.error(f"Error loading topics for group {group.group_name}: {str(e)}")
+            logger.error(f"Error in deprecated load_topics method: {str(e)}")
             raise
 
     async def load_topics_for_all_groups(
