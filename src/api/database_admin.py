@@ -64,19 +64,53 @@ async def fix_database_schema(
     """Fix database schema by dropping old tables and creating new ones."""
     logger.info("=== DATABASE SCHEMA FIX STARTED ===")
     try:
-        # Drop old conflicting tables
+        # Drop old conflicting tables more aggressively
         old_tables = ['group', 'alembic_version']
         dropped_tables = []
         
         for table in old_tables:
             try:
-                await session.exec(text(f"DROP TABLE IF EXISTS {table} CASCADE"))
-                dropped_tables.append(table)
-                logger.info(f"Dropped table: {table}")
+                # Check if table exists first
+                check_result = await session.exec(text(
+                    "SELECT table_name FROM information_schema.tables "
+                    f"WHERE table_schema = 'public' AND table_name = '{table}'"
+                ))
+                existing = check_result.fetchall()
+                
+                if existing:
+                    logger.info(f"Table {table} exists, attempting to drop...")
+                    
+                    # Try multiple approaches to drop the table
+                    try:
+                        await session.exec(text(f"DROP TABLE {table} CASCADE"))
+                    except Exception as cascade_error:
+                        logger.warning(f"CASCADE drop failed for {table}: {cascade_error}")
+                        try:
+                            # Try without CASCADE
+                            await session.exec(text(f"DROP TABLE {table}"))
+                        except Exception as simple_error:
+                            logger.warning(f"Simple drop failed for {table}: {simple_error}")
+                    
+                    # Verify the table was actually dropped
+                    verify_result = await session.exec(text(
+                        "SELECT table_name FROM information_schema.tables "
+                        f"WHERE table_schema = 'public' AND table_name = '{table}'"
+                    ))
+                    still_remaining = verify_result.fetchall()
+                    
+                    if not still_remaining:
+                        dropped_tables.append(table)
+                        logger.info(f"✅ Successfully dropped table: {table}")
+                    else:
+                        logger.error(f"❌ Table {table} still exists after DROP attempts")
+                else:
+                    logger.info(f"Table {table} does not exist (already dropped)")
+                    
             except Exception as e:
-                logger.warning(f"Could not drop {table}: {e}")
+                logger.error(f"Error processing table {table}: {e}")
         
         await session.commit()
+        logger.info(f"Attempted to drop tables. Successfully dropped: {dropped_tables}")
         
         # Create new tables using the app's existing database engine
         logger.info("Using app's existing database engine for schema creation")
