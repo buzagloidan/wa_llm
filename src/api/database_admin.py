@@ -4,7 +4,7 @@ Database administration endpoints for fixing schema issues
 """
 import logging
 from typing import Annotated, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import text, SQLModel
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -58,6 +58,7 @@ async def database_status(
 
 @router.post("/admin/database/fix-schema")
 async def fix_database_schema(
+    request: Request,
     session: Annotated[AsyncSession, Depends(get_db_async_session)],
 ) -> Dict[str, Any]:
     """Fix database schema by dropping old tables and creating new ones."""
@@ -77,29 +78,22 @@ async def fix_database_schema(
         
         await session.commit()
         
-        # Create new tables using SQLModel
-        from sqlalchemy import create_engine
-        from config import Settings
+        # Create new tables using the app's existing database engine
+        logger.info("Using app's existing database engine for schema creation")
         
-        # Get a new engine for schema creation (synchronous)
-        settings = Settings()
-        # Convert async URI to sync URI  
-        sync_db_uri = settings.db_uri
-        if '+asyncpg' in sync_db_uri:
-            sync_db_uri = sync_db_uri.replace('+asyncpg', '')
-        temp_engine = create_engine(sync_db_uri)
+        # Get the app's database engine
+        async_engine = request.app.state.db_engine
         
-        # Create tables synchronously
+        # Create tables using the async engine
         try:
-            logger.info(f"Creating schema with URI: {sync_db_uri[:50]}...")
-            SQLModel.metadata.create_all(temp_engine)
+            logger.info("Creating schema using async engine...")
+            async with async_engine.begin() as conn:
+                # Use run_sync to execute the synchronous create_all method
+                await conn.run_sync(SQLModel.metadata.create_all)
             logger.info("Schema creation completed successfully")
         except Exception as schema_error:
             logger.error(f"Schema creation failed: {schema_error}")
-            temp_engine.dispose()
             raise HTTPException(status_code=500, detail=f"Schema creation failed: {str(schema_error)}")
-        finally:
-            temp_engine.dispose()
             
         logger.info("Database schema fixed successfully")
         
