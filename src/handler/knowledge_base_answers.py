@@ -121,6 +121,14 @@ class KnowledgeBaseAnswers(BaseHandler):
             - Answer in the same language as the user's query
             - Reference specific features or sections from the documentation when relevant
             
+            FORMATTING RULES FOR WHATSAPP:
+            - DO NOT use markdown formatting (no *, #, **, etc.)
+            - Use plain text with proper spacing and line breaks
+            - Use simple bullet points with • or - if needed
+            - Make text clean and easy to read on mobile
+            - Use CAPITAL LETTERS sparingly for emphasis
+            - Keep paragraphs short and well-spaced
+            
             The documentation provided is highly relevant to the user's question - use it comprehensively.
             """
         else:
@@ -138,6 +146,14 @@ class KnowledgeBaseAnswers(BaseHandler):
             - Suggest they check the documentation or contact support for detailed technical questions
             - Keep responses helpful but acknowledge limitations when you don't have specific information
             - Answer in the same language as the user's query
+            
+            FORMATTING RULES FOR WHATSAPP:
+            - DO NOT use markdown formatting (no *, #, **, etc.)
+            - Use plain text with proper spacing and line breaks
+            - Use simple bullet points with • or - if needed
+            - Make text clean and easy to read on mobile
+            - Use CAPITAL LETTERS sparingly for emphasis
+            - Keep paragraphs short and well-spaced
             
             Since no highly relevant documentation was found, be helpful but acknowledge when you need to refer them to specific resources.
             """
