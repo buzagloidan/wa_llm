@@ -8,6 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import text, SQLModel
 from sqlalchemy.ext.asyncio import AsyncEngine
+import models  # Import models to ensure metadata is populated
+from models import KBTopic, Message, Sender  # Explicit imports to ensure all models are registered
 
 from .deps import get_db_async_session
 
@@ -70,9 +72,17 @@ async def fix_database_schema(
         await session.commit()
         
         # Create new tables using SQLModel
-        engine = session.get_bind()
-        async with engine.begin() as conn:
-            await conn.run_sync(SQLModel.metadata.create_all)
+        from sqlalchemy import create_engine
+        from config import Settings
+        
+        # Get a new engine for schema creation (synchronous)
+        settings = Settings()
+        sync_db_uri = settings.db_uri.replace('+asyncpg', '').replace('postgresql+asyncpg://', 'postgresql://')
+        temp_engine = create_engine(sync_db_uri)
+        
+        # Create tables synchronously
+        SQLModel.metadata.create_all(temp_engine)
+        temp_engine.dispose()
             
         logger.info("Database schema fixed successfully")
         
