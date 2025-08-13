@@ -216,11 +216,11 @@ async def dashboard_html(
             console.log('Base URL:', baseUrl);
 
             async function apiCall(endpoint, options = {{}}) {{
+                // Use relative URLs instead of base_url to avoid cross-origin issues
+                const url = endpoint.startsWith('/') ? endpoint : `/${{endpoint}}`;
+                console.log('Making API call to:', url);
+                
                 try {{
-                    // Use relative URLs instead of base_url to avoid cross-origin issues
-                    const url = endpoint.startsWith('/') ? endpoint : `/${{endpoint}}`;
-                    console.log('Making API call to:', url);
-                    
                     const response = await fetch(url, {{
                         headers: {{
                             'Content-Type': 'application/json',
