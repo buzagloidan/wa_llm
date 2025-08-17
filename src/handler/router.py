@@ -24,6 +24,17 @@ class Router(BaseHandler):
         super().__init__(session, whatsapp, embedding_client)
 
     async def __call__(self, message: Message):
+        # Send immediate emoji reaction to acknowledge message receipt
+        try:
+            await self.whatsapp.react_to_message(
+                message_id=message.message_id,
+                phone=message.chat_jid,
+                emoji="💬"
+            )
+            logger.info(f"Sent immediate reaction 💬 for message {message.message_id}")
+        except Exception as e:
+            logger.warning(f"Failed to send immediate reaction: {e}")
+        
         # Route all intents to LLM knowledge base for intelligent responses
         await self.ask_knowledge_base(message)
 

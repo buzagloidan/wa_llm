@@ -95,6 +95,17 @@ class KnowledgeBaseAnswers(BaseHandler):
             message.chat_jid,
             generation_response.output,
         )
+        
+        # Send completion emoji reaction to indicate processing is done
+        try:
+            await self.whatsapp.react_to_message(
+                message_id=message.message_id,
+                phone=message.chat_jid,
+                emoji="✅"
+            )
+            logger.info(f"Sent completion reaction ✅ for message {message.message_id}")
+        except Exception as e:
+            logger.warning(f"Failed to send completion reaction: {e}")
 
     @retry(
         wait=wait_random_exponential(min=1, max=30),
